@@ -72,11 +72,12 @@ class Terminator:
 
         pod_name = pod.metadata.name
         pod_namespace = pod.metadata.namespace
-        #deletion_grace_period = datetime.timedelta(seconds=pod.metadata.deletionGracePeriodSeconds or 0)
-        #termination_grace_period = datetime.timedelta(seconds=pod.spec.terminationGracePeriodSeconds or 0)
+        ##deletion_grace_period = datetime.timedelta(seconds=pod.metadata.deletionGracePeriodSeconds or 0)
+        ##termination_grace_period = datetime.timedelta(seconds=pod.spec.terminationGracePeriodSeconds or 0)
 
-        deletion_timestamp_s = pod.metadata.deletionTimestamp.replace("Z","")
-        deletion_timestamp = datetime.datetime.fromisoformat(deletion_timestamp_s)
+        #deletion_timestamp_s = pod.metadata.deletionTimestamp.replace("Z","")
+        deletion_timestamp = datetime.datetime.strptime(pod.metadata.deletionTimestamp.replace("Z",""), "%Y-%m-%dT%H:%M:%S")
+        #deletion_timestamp = datetime.datetime.fromisoformat(deletion_timestamp_s)
         now = datetime.datetime.utcnow()# + deletion_grace_period
         
         timediff = now - deletion_timestamp
