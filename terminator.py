@@ -72,17 +72,16 @@ class Terminator:
 
         pod_name = pod.metadata.name
         pod_namespace = pod.metadata.namespace
-        ##deletion_grace_period = datetime.timedelta(seconds=pod.metadata.deletionGracePeriodSeconds or 0)
-        ##termination_grace_period = datetime.timedelta(seconds=pod.spec.terminationGracePeriodSeconds or 0)
 
-        #deletion_timestamp_s = pod.metadata.deletionTimestamp.replace("Z","")
-        deletion_timestamp = datetime.datetime.strptime(pod.metadata.deletionTimestamp.replace("Z",""), "%Y-%m-%dT%H:%M:%S")
-        #deletion_timestamp = datetime.datetime.fromisoformat(deletion_timestamp_s)
+        deletion_timestamp_s = pod.metadata.deletionTimestamp.replace("Z","")
+        # Python 3.6 do not have datetime.fromisoformat()
+        try: 
+          deletion_timestamp = datetime.datetime.fromisoformat(deletion_timestamp_s)
+        except AttributeError:
+          deletion_timestamp = datetime.datetime.strptime(deletion_timestamp_s, "%Y-%m-%dT%H:%M:%S")
         now = datetime.datetime.utcnow()# + deletion_grace_period
         
         timediff = now - deletion_timestamp
-        #timediff = now - ( deletion_timestamp - termination_grace_period )
-        #timediff = now -  ( deletion_timestamp - deletion_grace_period - termination_grace_period )
         timediff_s = timediff.total_seconds()
 
         #self.logger.debug("deletionTimestamp: {}".format(deletion_timestamp))
