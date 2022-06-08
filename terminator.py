@@ -4,7 +4,8 @@ import os
 import requests
 import sys
 import time
-from kubernetes import config, client 
+from kubernetes import config, client
+from kubernetes.client.rest import ApiException
 from openshift.dynamic import DynamicClient
 from openshift.helper.userpassauth import OCPLoginConfiguration
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -50,10 +51,9 @@ class Terminator:
     self._token_created_at = datetime.datetime.utcnow()
     self.logger.debug('Auth token: {}'.format(self._kubeConfig.api_key))
     self.logger.debug('Token expires: in {} seconds'.format(self._kubeConfig.api_key_expires))
- 
 
   def _get_client(self):
-    # Login with credentials if provided (works on OCP4 only!)
+    # Login with credentials if provided (works on OCP4 only!
     if self.username != '':
       return self._ocp_login()
     else:
@@ -72,15 +72,15 @@ class Terminator:
 
         pod_name = pod.metadata.name
         pod_namespace = pod.metadata.namespace
-
         deletion_timestamp_s = pod.metadata.deletionTimestamp.replace("Z","")
+
         # Python 3.6 do not have datetime.fromisoformat()
-        try: 
+        try:
           deletion_timestamp = datetime.datetime.fromisoformat(deletion_timestamp_s)
         except AttributeError:
           deletion_timestamp = datetime.datetime.strptime(deletion_timestamp_s, "%Y-%m-%dT%H:%M:%S")
-        now = datetime.datetime.utcnow()# + deletion_grace_period
-        
+
+        now = datetime.datetime.utcnow()
         timediff = now - deletion_timestamp
         timediff_s = timediff.total_seconds()
 
@@ -88,15 +88,21 @@ class Terminator:
         #self.logger.debug("now: {}".format(now))
         #self.logger.debug("terminationGracePeriod: {}".format(termination_grace_period))
         #self.logger.debug("deletionGracePeriod: {}".format(deletion_grace_period))
-        #self.logger.debug("timediff: {} - {}".format(timediff, timediff_s))
+        #self.logger.debug("timediff: {} - {}".format(timediff, timediff_s)
 
         self.logger.info("Found pod {}/{} in Terminating state since {} seconds, treshold is {}".format(pod_namespace, pod_name, timediff_s, MAX_SECONDS))
+
         if timediff_s > self.max_seconds:
           self.logger.warning("Found pod {}/{} to be terminated".format(pod_namespace, pod_name))
           if not self.dry_run:
             body = {"apiVersion": "v1", "kind": "DeleteOptions", "gracePeriodSeconds":0, "propagationPolicy":"Background"}
-            self.logger.warning("Deleting pod {}/{}".format(pod_namespace, pod_name))
-            v1_pods.delete(namespace=pod_namespace, name=pod_name, body=body)
+            try:
+              self.logger.warning("Deleting pod {}/{}".format(pod_namespace, pod_name))
+              v1_pods.delete(namespace=pod_namespace, name=pod_name, body=body)
+            except ApiException as error:
+              self.logger.error("Got error on API DELETE request for pod {}/{}: {} {}".format(pod_namespace, pod_name, error.status, error.reason))
+            except Exception as e:
+              self.logger.error("Got a generic exception on API DELETE request: {}".format(e))
 
       if self.username != '':
         token_timediff = datetime.datetime.utcnow() - self._token_created_at
@@ -127,7 +133,7 @@ if __name__ == '__main__':
   t.namespace = NAMESPACE
   t.cycle_delay = int(CYCLE_DELAY)
 
-  if DRY_RUN.upper() == 'TRUE' or DRY_RUN.upper() == "YES" :
+  if DRY_RUN.upper() == 'TRUE' or DRY_RUN.upper() == "YES":
     t.dry_run = True
   else:
     t.dry_run = False
