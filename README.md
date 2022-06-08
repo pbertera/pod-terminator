@@ -1,5 +1,16 @@
 # Pod Terminator
 
+Some OCP 3.11 ansible [playbooks](https://github.com/openshift/openshift-ansible/blob/release-3.11/playbooks/openshift-node/private/restart.yml#L47-L52) performs a node drain with `oc adm drain <node> --force --delete-local-data --ignore-daemonsets`.
+Since the drain is not using the `--grace-period=0` in case a pod remains stuck in `Terminating` phase the playbook can fail.
+
+This script can be used to monitor the pods in `Terminating` phase and forcefully remove them from the API if they are in such status for more than a threshold.
+
+**NOTE:** The script removes the pod from the APIs, do not kills the container on the node, thus is possible that the container is still running on the node.
+
+## Disclaimer
+
+This is not an official Red Hat tool and should be considered as unsupported.
+
 ## Usage
 
 Kill all the pods with the `metadata.deletionTimestamp` older than `MAX_SECONDS` env variable
